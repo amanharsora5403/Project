@@ -8,13 +8,29 @@ on:
 
 jobs:
   build:
-
     runs-on: self-hosted
 
     steps:
+    # Step to ensure Docker is installed (if not already installed on your self-hosted runner)
+    - name: Install Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+        sudo systemctl enable --now docker
+        sudo usermod -aG docker $USER
+        docker --version
+
+    # Step to check out the repository
     - uses: actions/checkout@v4
+
+    # Step to log into Docker using secrets
+    - name: Log into Docker Hub
+      run: |
+        echo "${{ secrets_DOCKER_PASSWORD }}" | docker login --username ${{ secrets_DOCKER_USERNAME }} --password-stdin
+
+    # Step to build the site using the jekyll/builder container
     - name: Build the site in the jekyll/builder container
       run: |
         docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+          -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+          jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
