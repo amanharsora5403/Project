@@ -46,14 +46,14 @@ jobs:
     - name: Run Docker container
       run: |
         # Pull the Docker image from Docker Hub
-        docker pull amanharsora543211/newone:latest  # Ensure the image exists and the tag is correct
+        docker pull amanharsora543211/newone:latest .  # Ensure the image exists and the tag is correct
 
         # Stop and remove any running container with the same name (if any)
         docker stop newone || true
         docker rm newone || true
 
         # Run the Docker container
-        docker run -d -p 4000:4000 --name newone amanharsora543211/newone:latest
+        docker run -d -p 4000:4000 --name newone amanharsora543211/newone:latest .
 
     # Step 6: Check Docker container logs
     - name: Check Docker container logs
