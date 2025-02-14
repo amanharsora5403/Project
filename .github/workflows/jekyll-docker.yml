@@ -1,4 +1,4 @@
-name: Jekyll site CI
+name: Jekyll CI with Docker
 
 on:
   push:
@@ -8,10 +8,14 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: self-hosted  # Use your self-hosted runner.
 
     steps:
-    # Step to ensure Docker is installed (if not already installed on your self-hosted runner)
+    # Step 1: Checkout the code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Step 2: Install Docker on the self-hosted runner
     - name: Install Docker
       run: |
         sudo apt-get update
@@ -20,17 +24,37 @@ jobs:
         sudo usermod -aG docker $USER
         docker --version
 
-    # Step to check out the repository
-    - uses: actions/checkout@v4
+    # Step 3: Log in to Docker Hub
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}  # Your Docker Hub username stored as a secret
+        password: ${{ secrets.DOCKER_PASSWORD }}  # Your Docker Hub password stored as a secret
 
-    # Step to log into Docker using secrets
-    - name: Log into Docker Hub
-      run: |
-        echo "${{ secrets_DOCKER_PASSWORD }}" | docker login --username ${{ secrets_DOCKER_USERNAME }} --password-stdin
+    # Step 4: Build and push the Docker image for the Jekyll site
+    - name: Build & Push Docker image
+      uses: mr-smithers-excellent/docker-build-push@v6
+      with:
+        image: amanharsora543211/jekyll-site  # Your Docker image name
+        tags: latest
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub username stored as a secret
+        password: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub password stored as a secret
+        enableBuildKit: true  # Optional: Enable Docker BuildKit
 
-    # Step to build the site using the jekyll/builder container
-    - name: Build the site in the jekyll/builder container
+    # Step 5: Run the Docker container
+    - name: Run Docker container
       run: |
-        docker run \
-          -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-          jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+        # Pull the Docker image from Docker Hub
+        docker pull amanharsora543211/newone:latest
+        
+        # Stop and remove any running container with the same name (if any)
+        docker stop newone || true
+        docker rm newone || true
+
+        # Run the Docker container
+        docker run -d -p 4000:4000 --name newone amanharsora543211/newone:latest
+
+    # Step 6: Check Docker container logs to verify the site
+    - name: Check Docker container logs
+      run: docker logs newone
